@@ -1,0 +1,3 @@
+- name: Starting swap role
+  ansible.builtin.include_tasks: swap.yml
+  tags: swap

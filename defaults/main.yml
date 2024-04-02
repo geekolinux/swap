@@ -1,0 +1,10 @@
+#Change here the parameter to modify the systems 
+swap_create: "true"
+swap_enable: "true"
+swap_custom_size_mb: ""
+swap_custom: ""
+
+swap_file: "/swapfile"
+swap_file_owner: "root"
+swap_file_group: "root"
+swap_file_perm: "0600"

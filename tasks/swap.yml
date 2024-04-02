@@ -1,0 +1,36 @@
+- name: Load role variables
+  ansible.builtin.include_vars:
+    file: "{{ included_vars }}"
+  with_first_found:
+    - files:
+        - "{{ ansible_distribution | lower }}-{{ ansible_distribution_version }}.yml"
+        - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version }}.yml"
+        - "{{ ansible_distribution | lower }}.yml"
+        - "{{ ansible_os_family | lower }}.yml"
+      paths:
+        - "vars"
+      skip: true
+  loop_control:
+    loop_var: included_vars
+
+- name: Starting pre_generic tasks
+  ansible.builtin.include_tasks: pre_generic.yml
+
+- name: Starting distribution specific tasks
+  ansible.builtin.include_tasks:
+    file: "{{ included_tasks }}"
+  with_first_found:
+    - files:
+        - "{{ ansible_distribution | lower }}-{{ ansible_distribution_version }}.yml"
+        - "{{ ansible_distribution | lower }}-{{ ansible_distribution_major_version }}.yml"
+        - "{{ ansible_distribution | lower }}.yml"
+        - "{{ ansible_os_family | lower }}.yml"
+      skip: true
+  loop_control:
+    loop_var: included_tasks
+
+- name: Starting generic tasks
+  ansible.builtin.include_tasks: generic.yml
+
+#- name: Import post-generic task
+#  ansible.builtin.include_tasks: post_generic.yml

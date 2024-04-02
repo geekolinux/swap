@@ -1,0 +1,22 @@
+#Pre-generic task to define custom variables
+- name: Check if swap file exists
+  stat:
+    path: "{{ swap_file }}"
+  register: swap_file_check
+
+- name: Set variable for existing swap file size
+  set_fact:
+    swap_exist_size_mb: "{{ (swap_file_check.stat.size / 1024 / 1024) | int }}"
+  when: swap_file_check.stat.exists
+
+- name: Set variable for low ram space // double swap size
+  set_fact:
+    swap_file_double_swap_size: "{{ (ansible_memory_mb.real.total * 2) | int }}"
+
+- name: Set variable for mid ram space // same swap size
+  set_fact:
+    swap_file_same_swap_size: "{{ (ansible_memory_mb.real.total * 1) | int }}"
+
+- name: Set variable for high ram space // 4GB swap size
+  set_fact:
+    swap_file_4gb_swap_size: "4096"

@@ -1,0 +1,154 @@
+- name: Create the swap file automatic or customized
+  block:
+    - name: Create the automatic swap file
+      block:
+        - name: Disable existed swap file
+          ansible.builtin.shell: "swapoff {{ swap_file }}"
+          register: disable_swap_automatic
+          when:
+            - not ansible_swaptotal_mb | int == 0
+            - (swap_file_4gb_swap_size != swap_exist_size_mb) or (swap_file_same_swap_size != swap_exist_size_mb) or (swap_file_double_swap_size != swap_exist_size_mb)
+            - swap_file_check.stat.exists
+            - not swap_custom | bool
+
+        - name: Delete existed swap file
+          ansible.builtin.file:
+            path: "{{ swap_file }}"
+            state: absent
+          register: delete_swap_file_automatic
+          when:
+            - disable_swap_automatic is changed
+            - swap_file_check.stat.exists
+            - not swap_custom | bool
+
+        - name: Collect only facts returned by facter
+          ansible.builtin.setup:
+            gather_subset:
+              - 'all'
+
+        - name: Create a 2x swap file when RAM space is less than 2GB
+          ansible.builtin.shell: "fallocate -l {{ ansible_memory_mb.real.total * 2 }}MiB {{ swap_file }}"
+          register: creating_swapfile_automatic_low
+          when:
+            - ansible_memory_mb.real.total <=  2048
+            - (swap_file_double_swap_size | int != swap_exist_size_mb | int) or (swap_exist_size_mb is undefined)
+
+        - name: Create a 1x swap file when the RAM is 2GB until 8GB
+          ansible.builtin.shell: "fallocate -l {{ ansible_memory_mb.real.total * 1024 }}MiB {{ swap_file }}"
+          register: creating_swapfile_automatic_mid
+          when:
+            - (ansible_memory_mb.real.total > 2048) and (ansible_memory_mb.real.total < 8192)
+            - swap_file_same_swap_size != swap_exist_size_mb
+
+        - name: Create 4GB swap file when the RAM is higher than 8GB
+          ansible.builtin.shell: "fallocate -l 4096MiB {{ swap_file }}"
+          register: creating_swapfile_automatic_high
+          when:
+            - ansible_memory_mb.real.total >= 8192
+            - swap_file_4gb_swap_size != swap_exist_size_mb
+
+        - name: Collect only facts returned by facter
+          ansible.builtin.setup:
+            gather_subset:
+              - 'all'
+
+        - name: Change file ownership, group and permissions
+          ansible.builtin.file:
+            path: "{{ swap_file }}"
+            owner: "{{ swap_file_owner }}"
+            group: "{{ swap_file_group }}"
+            mode: "{{ swap_file_perm }}"
+          when: swap_file_check.stat.exists
+
+        - name: Set up a Linux swap area
+          ansible.builtin.shell: "mkswap {{ swap_file }}"
+          when: (creating_swapfile_automatic_low is changed) or (creating_swapfile_automatic_mid is changed) or (creating_swapfile_automatic_high is changed)
+
+        - name: Enabling the swap file
+          ansible.builtin.shell: "swapon {{ swap_file }}"
+          when: ansible_swaptotal_mb | int == 0
+
+        - name: Update /etc/fstab file
+          ansible.builtin.lineinfile:
+            path: "/etc/fstab"
+            insertafter: "^\n "
+            line: "{{ swap_file }}\tnone\tswap\tsw\t0\t0"
+      when:
+        - not swap_custom | bool
+        - swap_create | bool
+
+    - name: Create the custom swap file
+      block:
+        - name: Disable existed swap file
+          ansible.builtin.shell: "swapoff {{ swap_file }}"
+          register: disable_swap_custom
+          when:
+            - swap_custom_size_mb != swap_exist_size_mb
+            - swap_file_check.stat.exists
+
+        - name: Delete existed swap file
+          ansible.builtin.file:
+            path: "{{ swap_file }}"
+            state: absent
+          register: delete_swap_file_automatic
+          when:
+            - disable_swap_custom is changed
+            - swap_file_check.stat.exists
+
+        - name: Create the swap file with custom size
+          ansible.builtin.shell: "fallocate -l {{ swap_custom_size_mb }}MiB {{ swap_file }}"
+          register: creating_swapfile_custom
+          when:
+            - swap_custom_size_mb != swap_exist_size_mb
+
+        - name: Collect only facts returned by facter
+          ansible.builtin.setup:
+            gather_subset:
+              - 'all'
+
+        - name: Change file ownership, group and permissions to the swapfile for security reasons
+          ansible.builtin.file:
+            path: "{{ swap_file }}"
+            owner: "{{ swap_file_owner }}"
+            group: "{{ swap_file_group }}"
+            mode: "{{ swap_file_perm }}"
+          when: swap_file_check.stat.exists
+
+        - name: Set up a Linux swap area
+          ansible.builtin.shell: "mkswap {{ swap_file }}"
+          when: creating_swapfile_custom is changed
+
+        - name: Enabling the swap file
+          ansible.builtin.shell: "swapon {{ swap_file }}"
+          when: ansible_swaptotal_mb | int == 0
+
+        - name: Update /etc/fstab file
+          ansible.builtin.lineinfile:
+            path: "/etc/fstab"
+            insertafter: "^\n "
+            line: "{{ swap_file }}\tnone\tswap\tsw\t0\t0"
+      when:
+        - swap_custom | bool
+        - swap_custom_size_mb is defined
+  when:
+    - swap_create | bool
+
+- name: Collect only facts returned by facter
+  ansible.builtin.setup:
+    gather_subset:
+       - 'all'
+
+- name: Disable swap
+  ansible.builtin.shell: "swapoff {{ swap_file }}"
+  register: disable_swap
+  when:
+    - swap_enable == "false"
+    - swap_file_check.stat.exists
+
+- name: Enable swap
+  ansible.builtin.shell: "swapon {{ swap_file }}"
+  register: enable_swap
+  when:
+    - swap_enable | bool or swap_enable is undefined
+    - ansible_swaptotal_mb | int == 0
+    - swap_file_check.stat.exists
