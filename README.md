@@ -54,7 +54,7 @@ swap_enable: "false"
 [MIT License](https://opensource.org/license/MIT)
 
 ## Author
-I like to give linux administrators an guidance and solving their hand-made problems with the new generation of automatisation.
+I like to give linux administrators an guidance and solving their hand-made problems with the new generation of automatization.
 I´m open for any improvements, please contact if you have an feature requests to make my repository better. Feedback is always welcome.
 
 Enjoy my art,
