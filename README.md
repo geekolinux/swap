@@ -55,7 +55,8 @@ swap_enable: "false"
 
 ## Author
 I like to give linux administrators an guidance and solving their hand-made problems with the new generation of automatization.
-I´m open for any improvements, please contact if you have an feature requests to make my repository better. Feedback is always welcome.
+I´m open for any improvements, please contact if you have an feature requests to make my repository better. Feedback is always welcome, just write me 
+on my email: geekolinuxexpert@proton.me
 
 Enjoy my art,
 
